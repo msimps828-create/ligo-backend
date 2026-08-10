@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, requireAdmin } from '../middleware/auth';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// GET /api/products - Get all available products (Public)
+// GET /api/products - Get all available products
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({
@@ -19,7 +19,7 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-// GET /api/products/admin/all - Get all products including unavailable (Admin)
+// GET /api/products/admin/all - Get all products (Admin)
 router.get('/admin/all', authenticate, requireAdmin, async (_req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({
@@ -32,7 +32,7 @@ router.get('/admin/all', authenticate, requireAdmin, async (_req: Request, res: 
   }
 });
 
-// POST /api/products - Create a new product (Admin)
+// POST /api/products - Create product (Admin)
 router.post('/', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { name, description, price, imageUrl } = req.body;
@@ -62,10 +62,10 @@ router.post('/', authenticate, requireAdmin, async (req: Request, res: Response)
   }
 });
 
-// PUT /api/products/:id - Update a product (Admin)
+// PUT /api/products/:id - Update product (Admin)
 router.put('/:id', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { name, description, price, isAvailable, imageUrl } = req.body;
 
     const existingProduct = await prisma.product.findUnique({ where: { id } });
@@ -95,10 +95,10 @@ router.put('/:id', authenticate, requireAdmin, async (req: Request, res: Respons
   }
 });
 
-// DELETE /api/products/:id - Delete a product (Admin)
+// DELETE /api/products/:id - Delete product (Admin)
 router.delete('/:id', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const existingProduct = await prisma.product.findUnique({ where: { id } });
     if (!existingProduct) {

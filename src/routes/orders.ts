@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -20,7 +20,6 @@ router.get('/', authenticateToken, async (req: any, res: Response) => {
         OR: [{ riderId: userId }, { status: 'PENDING' }],
       };
     }
-    // ADMIN sees all orders (whereClause remains empty {})
 
     const orders = await prisma.order.findMany({
       where: whereClause,
@@ -41,10 +40,10 @@ router.get('/', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// GET /api/orders/:id - Fetch a single order by ID
+// GET /api/orders/:id - Fetch single order
 router.get('/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -61,7 +60,6 @@ router.get('/:id', authenticateToken, async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Authorization check for customers
     if (req.user.role === 'CUSTOMER' && order.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -73,7 +71,7 @@ router.get('/:id', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// POST /api/orders - Create a new order
+// POST /api/orders - Create new order
 router.post('/', authenticateToken, async (req: any, res: Response) => {
   try {
     const { deliveryAddress, items } = req.body;
@@ -87,7 +85,6 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
     let totalPrice = 0;
     const orderItemsToCreate = [];
 
-    // Calculate total price and validate products
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
@@ -111,7 +108,6 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
       });
     }
 
-    // Save order and items to database
     const newOrder = await prisma.order.create({
       data: {
         userId: req.user.userId,
@@ -134,10 +130,10 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// PATCH /api/orders/:id/status - Update status or assign rider
+// PATCH /api/orders/:id/status - Update order status
 router.patch('/:id/status', authenticateToken, async (req: any, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status, riderId } = req.body;
 
     const existingOrder = await prisma.order.findUnique({ where: { id } });
@@ -149,7 +145,6 @@ router.patch('/:id/status', authenticateToken, async (req: any, res: Response) =
     if (status) updateData.status = status;
     if (riderId) updateData.riderId = riderId;
 
-    // Auto-assign rider if a rider updates the order status
     if (req.user.role === 'RIDER' && !existingOrder.riderId) {
       updateData.riderId = req.user.userId;
     }
