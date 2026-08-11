@@ -5,8 +5,22 @@ import { prisma } from '../lib/prisma.js';
 
 const router = Router();
 
+// Helper to ensure JWT_SECRET exists at runtime
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is not defined.');
+  }
+  return secret;
+};
+
 router.post('/register', async (req: Request, res: Response) => {
   const { email, password, name, phone, role } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -18,18 +32,24 @@ router.post('/register', async (req: Request, res: Response) => {
     const userRole = validRoles.includes(role) ? role : 'CUSTOMER';
 
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name, phone, role: userRole },
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        phone,
+        role: userRole,
+      },
     });
 
     const token = jwt.sign(
       { userId: user.id, role: user.role },
-      process.env.JWT_SECRET || 'secret',
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
     return res.status(201).json({
       token,
-      user: { id: user.id, name: user.name, role: user.role },
+      user: { id: user.id, name: user.name, role: user.role, email: user.email },
     });
   } catch (err) {
     console.error('Error in /register:', err);
@@ -39,6 +59,11 @@ router.post('/register', async (req: Request, res: Response) => {
 
 router.post('/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -52,13 +77,13 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const token = jwt.sign(
       { userId: user.id, role: user.role },
-      process.env.JWT_SECRET || 'secret',
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
     return res.json({
       token,
-      user: { id: user.id, name: user.name, role: user.role },
+      user: { id: user.id, name: user.name, role: user.role, email: user.email },
     });
   } catch (err) {
     console.error('Error in /login:', err);
