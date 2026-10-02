@@ -5,7 +5,13 @@ export interface AuthenticatedRequest extends Request {
   user?: any;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ligo_super_secret_key_2026';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is not defined.');
+  }
+  return secret;
+}
 
 // Authenticate JWT token middleware
 export const authenticate = (
@@ -20,7 +26,7 @@ export const authenticate = (
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+  jwt.verify(token, getJwtSecret(), (err: any, user: any) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }

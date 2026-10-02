@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
+import { loginSchema, registerSchema } from '../schemas/auth.schema.js';
+import { validate } from '../middleware/validate.js';
 
 const router = Router();
 
@@ -14,8 +16,8 @@ const getJwtSecret = (): string => {
   return secret;
 };
 
-router.post('/register', async (req: Request, res: Response) => {
-  const { email, password, name, phone, role } = req.body;
+router.post('/register', validate(registerSchema), async (req: Request, res: Response) => {
+  const { email, password, name, phone } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
@@ -28,8 +30,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const validRoles = ['CUSTOMER', 'ADMIN', 'RIDER'];
-    const userRole = validRoles.includes(role) ? role : 'CUSTOMER';
+    const userRole = 'CUSTOMER';
 
     const user = await prisma.user.create({
       data: {
@@ -57,7 +58,7 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   if (!email || !password) {

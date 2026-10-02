@@ -13,7 +13,6 @@ export const registerSchema = z.object({
     .string()
     .min(10, 'Phone number must be at least 10 digits')
     .optional(),
-  role: z.enum(['CUSTOMER', 'RIDER', 'ADMIN']).optional(),
 });
 
 export const loginSchema = z.object({
